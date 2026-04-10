@@ -25,9 +25,24 @@ struct Order {
     quantity: Quantity,
 }
 
+#[derive(Debug, Clone)]
+struct PriceLevel {
+    orders: VecDeque<Order>,
+    total_quantity: u64,
+}
+
+impl PriceLevel {
+    fn new() -> Self {
+        Self {
+            orders: VecDeque::new(),
+            total_quantity: 0,
+        }
+    }
+}
+
 struct OrderBook {
-    bids: BTreeMap<Price, VecDeque<Order>>,
-    asks: BTreeMap<Price, VecDeque<Order>>,
+    bids: BTreeMap<Price, PriceLevel>,
+    asks: BTreeMap<Price, PriceLevel>,
 }
 
 impl OrderBook {
@@ -69,18 +84,20 @@ impl OrderBook {
                 break;
             }
 
-            let order = self.asks.get_mut(&best_ask_price).unwrap();
+            let level = self.asks.get_mut(&best_ask_price).unwrap();
 
-            while let Some(mut top_order) = order.pop_front() {
+            while let Some(mut top_order) = level.orders.pop_front() {
                 let traded_qty = incoming.quantity.min(top_order.quantity);
 
                 println!("TRADE: {} @ {}", traded_qty, best_ask_price);
 
                 incoming.quantity -= traded_qty;
                 top_order.quantity -= traded_qty;
+                level.total_quantity -= traded_qty;
 
                 if top_order.quantity > 0 {
-                    order.push_front(top_order)
+                    level.total_quantity += top_order.quantity;
+                    level.orders.push_front(top_order);
                 }
 
                 if incoming.quantity == 0 {
@@ -88,7 +105,7 @@ impl OrderBook {
                 }
             }
 
-            if order.is_empty() {
+            if level.orders.is_empty() {
                 self.asks.remove(&best_ask_price);
             }
 
@@ -104,18 +121,20 @@ impl OrderBook {
                 break;
             }
 
-            let order = self.bids.get_mut(&best_bid_price).unwrap();
+            let level = self.bids.get_mut(&best_bid_price).unwrap();
 
-            while let Some(mut top_order) = order.pop_front() {
+            while let Some(mut top_order) = level.orders.pop_front() {
                 let traded_qty = incoming.quantity.min(top_order.quantity);
 
                 println!("TRADE: {} @ {}", traded_qty, best_bid_price);
 
                 incoming.quantity -= traded_qty;
                 top_order.quantity -= traded_qty;
+                level.total_quantity -= traded_qty;
 
                 if top_order.quantity > 0 {
-                    order.push_front(top_order);
+                    level.total_quantity += top_order.quantity;
+                    level.orders.push_front(top_order);
                 }
 
                 if incoming.quantity == 0 {
@@ -123,7 +142,7 @@ impl OrderBook {
                 }
             }
 
-            if order.is_empty() {
+            if level.orders.is_empty() {
                 self.bids.remove(&best_bid_price);
             }
 
@@ -141,9 +160,10 @@ impl OrderBook {
             Side::Sell => &mut self.asks,
         };
 
-        book.entry(price)
-            .or_insert_with(VecDeque::new)
-            .push_back(order);
+        let level = book.entry(price).or_insert_with(PriceLevel::new);
+
+        level.total_quantity += order.quantity;
+        level.orders.push_back(order);
     }
 }
 
