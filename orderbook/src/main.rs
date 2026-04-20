@@ -1,28 +1,26 @@
 use std::collections::{BTreeMap, VecDeque};
 
 type Price = u64;
-type Quantity = u64;
-type OrderId = u64;
+
+#[derive(Debug, Clone)]
+struct Order {
+    id: u64,
+    side: Side,
+    order_type: OrderType,
+    price: Option<Price>,
+    quantity: u64,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 enum Side {
-    Buy,
-    Sell,
+    BUY,
+    SELL,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 enum OrderType {
     LIMIT,
     MARKET,
-}
-
-#[derive(Debug, Clone)]
-struct Order {
-    id: OrderId,
-    side: Side,
-    order_type: OrderType,
-    price: Option<Price>,
-    quantity: Quantity,
 }
 
 #[derive(Debug, Clone)]
@@ -41,22 +39,22 @@ impl PriceLevel {
 }
 
 struct OrderBook {
-    bids: BTreeMap<Price, PriceLevel>,
-    asks: BTreeMap<Price, PriceLevel>,
+    bid: BTreeMap<Price, PriceLevel>,
+    ask: BTreeMap<Price, PriceLevel>,
 }
 
 impl OrderBook {
     fn new() -> Self {
         Self {
-            bids: BTreeMap::new(),
-            asks: BTreeMap::new(),
+            bid: BTreeMap::new(),
+            ask: BTreeMap::new(),
         }
     }
 
     fn add_order(&mut self, mut incoming: Order) {
         match incoming.side {
-            Side::Buy => self.match_buy(&mut incoming),
-            Side::Sell => self.match_sell(&mut incoming),
+            Side::BUY => self.match_buy(&mut incoming),
+            Side::SELL => self.match_sell(&mut incoming),
         }
 
         if incoming.quantity > 0 {
@@ -64,40 +62,41 @@ impl OrderBook {
         }
     }
 
-    fn buy_can_match(&self, incoming: &Order, best_ask: Price) -> bool {
-        match incoming.order_type {
-            OrderType::MARKET => true,
-            OrderType::LIMIT => incoming.price.unwrap() >= best_ask,
-        }
+    fn insert_order(&mut self, incoming: Order) {
+        let price = incoming.price.expect("Limit order must have price");
+
+        let book = match incoming.side {
+            Side::BUY => &mut self.bid,
+            Side::SELL => &mut self.ask,
+        };
+
+        let level = book.entry(price).or_insert_with(PriceLevel::new());
     }
 
-    fn sell_can_match(&self, incoming: &Order, best_bid: Price) -> bool {
+    fn can_match_buy(&mut self, incoming: &Order, best_price: Price) -> bool {
         match incoming.order_type {
             OrderType::MARKET => true,
-            OrderType::LIMIT => incoming.price.unwrap() <= best_bid,
+            OrderType::LIMIT => incoming.price.unwrap() >= best_price,
         }
     }
 
     fn match_buy(&mut self, incoming: &mut Order) {
-        while let Some((&best_ask_price, _)) = self.asks.iter().next() {
-            if !self.buy_can_match(incoming, best_ask_price) {
+        while let Some(best_price) = self.bid.keys().next().cloned() {
+            if !self.can_match_buy(incoming, best_price) {
                 break;
             }
 
-            let level = self.asks.get_mut(&best_ask_price).unwrap();
+            let level = self.bid.get_mut(&best_price).unwrap();
 
-            while let Some(mut top_order) = level.orders.pop_front() {
-                let traded_qty = incoming.quantity.min(top_order.quantity);
+            while let Some(order) = level.orders.front_mut() {
+                let trade_quantity = incoming.quantity.min(order.quantity);
 
-                println!("TRADE: {} @ {}", traded_qty, best_ask_price);
+                incoming.quantity -= trade_quantity;
+                order.quantity -= trade_quantity;
+                level.total_quantity -= trade_quantity;
 
-                incoming.quantity -= traded_qty;
-                top_order.quantity -= traded_qty;
-                level.total_quantity -= traded_qty;
-
-                if top_order.quantity > 0 {
-                    level.total_quantity += top_order.quantity;
-                    level.orders.push_front(top_order);
+                if order.quantity == 0 {
+                    level.orders.pop_front();
                 }
 
                 if incoming.quantity == 0 {
@@ -106,35 +105,39 @@ impl OrderBook {
             }
 
             if level.orders.is_empty() {
-                self.asks.remove(&best_ask_price);
+                self.bid.remove(&best_price);
             }
 
             if incoming.quantity == 0 {
                 break;
             }
+        }
+    }
+
+    fn can_match_sell(&mut self, incoming: &Order, best_price: Price) -> bool {
+        match incoming.order_type {
+            OrderType::MARKET => true,
+            OrderType::LIMIT => incoming.price.unwrap() <= best_price,
         }
     }
 
     fn match_sell(&mut self, incoming: &mut Order) {
-        while let Some((&best_bid_price, _)) = self.bids.iter().next() {
-            if !self.sell_can_match(incoming, best_bid_price) {
+        while let Some(best_price) = self.ask.keys().next().cloned() {
+            if !self.can_match_sell(incoming, best_price) {
                 break;
             }
 
-            let level = self.bids.get_mut(&best_bid_price).unwrap();
+            let level = self.ask.get_mut(&best_price).unwrap();
 
-            while let Some(mut top_order) = level.orders.pop_front() {
-                let traded_qty = incoming.quantity.min(top_order.quantity);
+            while let Some(order) = level.orders.front_mut() {
+                let trade_quantity = incoming.quantity.min(order.quantity);
 
-                println!("TRADE: {} @ {}", traded_qty, best_bid_price);
+                incoming.quantity -= trade_quantity;
+                order.quantity -= trade_quantity;
+                level.total_quantity -= trade_quantity;
 
-                incoming.quantity -= traded_qty;
-                top_order.quantity -= traded_qty;
-                level.total_quantity -= traded_qty;
-
-                if top_order.quantity > 0 {
-                    level.total_quantity += top_order.quantity;
-                    level.orders.push_front(top_order);
+                if order.quantity == 0 {
+                    level.orders.pop_front();
                 }
 
                 if incoming.quantity == 0 {
@@ -143,27 +146,13 @@ impl OrderBook {
             }
 
             if level.orders.is_empty() {
-                self.bids.remove(&best_bid_price);
+                self.ask.remove(&best_price);
             }
 
             if incoming.quantity == 0 {
                 break;
             }
         }
-    }
-
-    fn insert_order(&mut self, order: Order) {
-        let price = order.price.expect("Limit order must have a price");
-
-        let book = match order.side {
-            Side::Buy => &mut self.bids,
-            Side::Sell => &mut self.asks,
-        };
-
-        let level = book.entry(price).or_insert_with(PriceLevel::new);
-
-        level.total_quantity += order.quantity;
-        level.orders.push_back(order);
     }
 }
 
@@ -172,28 +161,9 @@ fn main() {
 
     ob.add_order(Order {
         id: 1,
-        side: Side::Buy,
-        order_type: OrderType::LIMIT,
-        price: Some(100),
-        quantity: 5,
-    });
-
-    ob.add_order(Order {
-        id: 2,
-        side: Side::Sell,
+        side: Side::SELL,
         order_type: OrderType::MARKET,
         price: None,
-        quantity: 3,
+        quantity: 10,
     });
-
-    ob.add_order(Order {
-        id: 3,
-        side: Side::Sell,
-        order_type: OrderType::LIMIT,
-        price: Some(99),
-        quantity: 3,
-    });
-
-    println!("OrderBook bids state {:?}", ob.bids);
-    println!("OrderBook asks state {:?}", ob.asks);
 }
