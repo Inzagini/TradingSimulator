@@ -22,8 +22,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.postgresql:postgresql")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    runtimeOnly("org.postgresql:postgresql") 
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    runtimeOnly("org.postgresql:postgresql")
 }
 
 kotlin {
