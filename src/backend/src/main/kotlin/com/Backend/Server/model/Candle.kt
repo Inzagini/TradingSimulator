@@ -15,17 +15,17 @@ data class Candle(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     @Column(nullable = false)
-    val symbol: String,
+    val symbol: String = "",
     @Column(nullable = false)
-    val timestamp: Instant,
+    val timestamp: Instant = Instant.now(),
     @Column(nullable = false)
-    val open: Double,
+    val open: Double = 0.0,
     @Column(nullable = false)
-    val close: Double,
+    val close: Double = 0.0,
     @Column(nullable = false)
-    val high: Double,
+    val high: Double = 0.0,
     @Column(nullable = false)
-    val low: Double,
+    val low: Double = 0.0,
     @Column(nullable = false)
-    val volume: Long,
+    val volume: Long = 0,
 )

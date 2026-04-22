@@ -13,26 +13,27 @@ class MarketDataIngestionService(
     private val client = WebClient.create()
 
     fun ingestDummyData(symbol: String) {
-        val candles = listOf(
-            Candle(
-                symbol = symbol,
-                timestamp = Instant.parse("2026-01-01T10:00:00Z"),
-                open = 4800.0,
-                high = 4810.0,
-                low = 4795.0,
-                close = 4805.0,
-                volume = 1200
-            ),
-            Candle(
-                symbol = symbol,
-                timestamp = Instant.parse("2026-01-01T10:01:00Z"),
-                open = 4805.0,
-                high = 4820.0,
-                low = 4800.0,
-                close = 4815.0,
-                volume = 900
+        val candles =
+            listOf(
+                Candle(
+                    symbol = symbol,
+                    timestamp = Instant.parse("2026-01-01T10:00:00Z"),
+                    open = 4800.0,
+                    high = 4810.0,
+                    low = 4795.0,
+                    close = 4805.0,
+                    volume = 1200,
+                ),
+                Candle(
+                    symbol = symbol,
+                    timestamp = Instant.parse("2026-01-01T10:01:00Z"),
+                    open = 4805.0,
+                    high = 4820.0,
+                    low = 4800.0,
+                    close = 4815.0,
+                    volume = 900,
+                ),
             )
-        )
 
         candleRepository.saveAll(candles)
     }
