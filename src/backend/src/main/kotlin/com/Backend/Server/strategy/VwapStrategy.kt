@@ -12,8 +12,9 @@ class VwapStrategy(
         current: Candle,
         history: List<Candle>,
     ): Signal {
-        val vwap = indicatorService.calculateVWAP(history) ?: return Signal.HOLD
+        val vwap = indicatorService.calculateVWAP(history.takeLast(20)) ?: return Signal.HOLD
 
+        println("vwap: $vwap, current close: ${current.close}")
         return when {
             current.close > vwap -> Signal.BUY
             current.close < vwap -> Signal.SELL
