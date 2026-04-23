@@ -19,5 +19,7 @@ class CandleControler(
         @RequestParam symbol: String,
         @RequestParam start: String,
         @RequestParam end: String,
-    ): List<Candle> = candleService.getCandles(symbol, start, end)
+        @RequestParam(defaultValue = "1000") limit: Int,
+        @RequestParam(defaultValue = "0") offset: Int,
+    ): List<Candle> = candleService.getCandles(symbol, start, end, limit, offset)
 }
