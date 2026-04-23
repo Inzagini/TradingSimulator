@@ -19,5 +19,5 @@ class CandleControler(
         @RequestParam symbol: String,
         @RequestParam start: String,
         @RequestParam end: String,
-    ): List<Candle> = candleService.getCandles(symbol, Instant.parse(start.trim()), Instant.parse(end.trim()))
+    ): List<Candle> = candleService.getCandles(symbol, start, end)
 }

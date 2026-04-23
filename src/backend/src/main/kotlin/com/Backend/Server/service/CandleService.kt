@@ -11,7 +11,18 @@ class CandleService(
 ) {
     fun getCandles(
         symbol: String,
-        start: Instant,
-        end: Instant,
-    ): List<Candle> = candleRepository.findBySymbolAndTimestampBetween(symbol, start, end)
+        start: String,
+        end: String,
+    ): List<Candle> {
+        val startTime = parseTime(start)
+        val endTime = parseTime(end)
+        return candleRepository.findBySymbolAndTimestampBetween(symbol, startTime, endTime)
+    }
+
+    private fun parseTime(value: String): Instant =
+        try {
+            Instant.parse(value)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid timestamp format: $value")
+        }
 }
