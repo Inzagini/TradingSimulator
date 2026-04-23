@@ -9,6 +9,9 @@ import java.time.Instant
     indexes = [
         Index(name = "idx_symbol_time", columnList = "symbol, timestamp"),
     ],
+    uniqueConstraints = [
+        UniqueConstraint(name = "uk_symbol_timestamp", columnNames = ["symbol", "timestamp"]),
+    ],
 )
 data class Candle(
     @Id

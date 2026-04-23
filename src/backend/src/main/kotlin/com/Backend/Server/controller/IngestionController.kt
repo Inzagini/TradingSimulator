@@ -15,7 +15,7 @@ class IngestionController(
     fun ingest(
         @PathVariable symbol: String,
     ): String {
-        ingestionService.ingestDummyData(symbol)
+        ingestionService.ingestBatch(symbol)
         return "Ingestion completed for $symbol"
     }
 }
