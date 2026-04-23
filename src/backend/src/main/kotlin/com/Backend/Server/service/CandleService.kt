@@ -9,6 +9,7 @@ import java.time.Instant
 @Service
 class CandleService(
     private val candleRepository: CandleRepository,
+    private val indicatorService: IndicatorService,
 ) {
     fun getCandlesCursor(
         symbol: String,
@@ -21,9 +22,12 @@ class CandleService(
 
         val nextCursor = candles.lastOrNull()?.timestamp?.toString()
 
+        val vwap = indicatorService.calculateVWAP(candles)
+
         return CandleResponse(
             data = candles,
             nextCursor = nextCursor,
+            vwap = vwap,
         )
     }
 
