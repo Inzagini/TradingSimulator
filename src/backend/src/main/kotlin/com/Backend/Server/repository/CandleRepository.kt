@@ -21,4 +21,19 @@ interface CandleRepository : JpaRepository<Candle, Long> {
         @Param("symbol") symbol: String,
         @Param("after") start: Instant,
     ): List<Candle>
+
+
+    @Query(
+        """
+        SELECT c FROM Candle c
+        WHERE c.symbol = :symbol
+        AND c.timestamp BETWEEN :start AND :end
+        ORDER BY c.timestamp ASC
+    """
+    )
+    fun findCandles(
+        @Param("symbol") symbol: String,
+        @Param("start") start: Instant,
+        @Param("end") end: Instant,
+    ): List<Candle>
 }

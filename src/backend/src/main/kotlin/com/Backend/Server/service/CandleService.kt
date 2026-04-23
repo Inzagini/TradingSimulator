@@ -31,6 +31,21 @@ class CandleService(
         )
     }
 
+    fun getCandles(
+        symbol: String,
+        start: String,
+        end: String,
+        limit: Int,
+        offset: Int,
+    ): List<Candle> {
+        val startTime = parseTime(start)
+        val endTime = parseTime(end)
+
+        val candles = candleRepository.findCandles(symbol, startTime, endTime)
+
+        return candles.drop(offset).take(limit)
+    }
+
     private fun parseTime(value: String): Instant =
         try {
             Instant.parse(value)
