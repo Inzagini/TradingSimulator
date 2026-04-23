@@ -9,19 +9,16 @@ import java.time.Instant
 
 @Repository
 interface CandleRepository : JpaRepository<Candle, Long> {
-
     @Query(
         """
         SELECT c FROM Candle c
         WHERE c.symbol = :symbol
-        AND c.timestamp BETWEEN :start AND :end
+        AND c.timestamp > :after 
         ORDER BY c.timestamp ASC
-    """
+    """,
     )
-
-    fun findCanles(
+    fun findAfter(
         @Param("symbol") symbol: String,
-        @Param("start") start: Instant,
-        @Param("end") end: Instant,
+        @Param("after") start: Instant,
     ): List<Candle>
 }
