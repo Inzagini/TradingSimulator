@@ -4,10 +4,12 @@ import com.Backend.Server.model.Candle
 import com.Backend.Server.model.Trade
 import com.Backend.Server.service.dto.BacktestMetrics
 import com.Backend.Server.service.dto.BacktestResult
+import com.Backend.Server.service.dto.EquityPoint
 import com.Backend.Server.service.dto.SweepResult
 import com.Backend.Server.strategy.Signal
 import com.Backend.Server.strategy.Strategy
 import com.Backend.Server.strategy.StrategyFactory
+import org.apache.el.lang.ELArithmetic
 import org.springframework.stereotype.Service
 import kotlin.math.max
 
@@ -58,11 +60,13 @@ class BacktestService {
 
         val totalPnl = trades.sumOf { it.pnl() }
         val metrics = calculateMetric(trades)
+        val equityCurve = buildMarkToMarketEquity(candles, trades)
 
         return BacktestResult(
             totalPnl = totalPnl,
             trades = trades,
             metrics = metrics,
+            equityCurve = equityCurve,
         )
     }
 
@@ -120,5 +124,49 @@ class BacktestService {
         }
 
         return results.sortedByDescending { it.result.totalPnl }
+    }
+
+    private fun buildEquityCurve(trades: List<Trade>): List<EquityPoint> {
+        val curve = mutableListOf<EquityPoint>()
+
+        var equity = 0.0
+
+        for (trade in trades) {
+            equity += trade.pnl()
+            curve.add(EquityPoint(timestamp = trade.exitTime, equity = equity))
+        }
+
+        return curve
+    }
+
+    private fun buildMarkToMarketEquity(candles: List<Candle>, trades: List<Trade>): List<EquityPoint> {
+
+        val curve = mutableListOf<EquityPoint>()
+
+        var realizePnl = 0.0
+        var currentTrade: Trade? = null
+        var tradeIndex = 0
+
+        for (candle in candles) {
+
+            if (tradeIndex < trades.size && trades[tradeIndex].entryTime == candle.timestamp) {
+                currentTrade = trades[tradeIndex]
+            }
+
+            if (currentTrade != null && currentTrade.exitTime == candle.timestamp) {
+                realizePnl += currentTrade.pnl()
+                currentTrade = null
+                tradeIndex++
+            }
+
+            val unrealizePnl =
+                if (currentTrade != null) (candle.close - currentTrade.entryPrice) * currentTrade.quantity else 0.0
+
+            val equity = realizePnl + unrealizePnl
+
+            curve.add(EquityPoint(candle.timestamp, equity))
+        }
+
+        return curve
     }
 }

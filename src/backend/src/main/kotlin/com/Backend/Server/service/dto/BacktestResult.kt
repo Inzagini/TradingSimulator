@@ -6,4 +6,5 @@ data class BacktestResult(
     val totalPnl: Double,
     val trades: List<Trade>,
     val metrics: BacktestMetrics,
+    val equityCurve: List<EquityPoint>,
 )
