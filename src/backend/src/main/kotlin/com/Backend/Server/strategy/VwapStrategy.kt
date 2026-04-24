@@ -7,17 +7,19 @@ import com.Backend.Server.strategy.Strategy
 
 class VwapStrategy(
     private val indicatorService: IndicatorService,
+    private val window: Int,
+    private val threshold: Double,
 ) : Strategy {
     override fun generateSignal(
         current: Candle,
         history: List<Candle>,
     ): Signal {
-        val vwap = indicatorService.calculateVWAP(history.takeLast(20)) ?: return Signal.HOLD
+        val vwap = indicatorService.calculateVWAP(history.takeLast(window)) ?: return Signal.HOLD
 
         println("vwap: $vwap, current close: ${current.close}")
         return when {
-            current.close > vwap -> Signal.BUY
-            current.close < vwap -> Signal.SELL
+            current.close > vwap + threshold -> Signal.BUY
+            current.close < vwap + threshold -> Signal.SELL
             else -> Signal.HOLD
         }
     }

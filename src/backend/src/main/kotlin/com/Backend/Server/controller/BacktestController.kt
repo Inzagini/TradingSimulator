@@ -3,6 +3,7 @@ package com.Backend.Server.controller
 import com.Backend.Server.repository.CandleRepository
 import com.Backend.Server.service.BacktestService
 import com.Backend.Server.service.IndicatorService
+import com.Backend.Server.strategy.StrategyFactory
 import com.Backend.Server.strategy.VwapStrategy
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -15,16 +16,18 @@ import java.time.Instant
 class BacktestController(
     private val candleRepository: CandleRepository,
     private val backtestService: BacktestService,
-    private val indicatorService: IndicatorService,
+    private val strategyFactory: StrategyFactory,
 ) {
     @GetMapping
     fun runBacktest(
         @RequestParam symbol: String,
         @RequestParam start: String,
         @RequestParam end: String,
+        @RequestParam window: Int,
+        @RequestParam threshold: Double,
     ): Any {
         val candles = candleRepository.findCandles(symbol, Instant.parse(start), Instant.parse(end))
-        val strategy = VwapStrategy(indicatorService)
+        val strategy = strategyFactory.createVwapStragy(window, threshold)
 
         return backtestService.runBacktest(candles, strategy)
     }
