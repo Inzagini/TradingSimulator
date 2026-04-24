@@ -1,4 +1,4 @@
-package com.Backend.Server.service
+package com.Backend.Server.service.dto
 
 data class BacktestMetrics(
     val totalTrades: Int,

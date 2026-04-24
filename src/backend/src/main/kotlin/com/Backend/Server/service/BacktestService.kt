@@ -2,8 +2,12 @@ package com.Backend.Server.service
 
 import com.Backend.Server.model.Candle
 import com.Backend.Server.model.Trade
+import com.Backend.Server.service.dto.BacktestMetrics
+import com.Backend.Server.service.dto.BacktestResult
+import com.Backend.Server.service.dto.SweepResult
 import com.Backend.Server.strategy.Signal
 import com.Backend.Server.strategy.Strategy
+import com.Backend.Server.strategy.StrategyFactory
 import org.springframework.stereotype.Service
 import kotlin.math.max
 
@@ -95,5 +99,26 @@ class BacktestService {
             avarageLoss = avgLoss,
             maxDrawdown = maxDrawdown,
         )
+    }
+
+    fun runParameterSweep(
+        candles: List<Candle>,
+        windows: List<Int>,
+        thredsholds: List<Double>,
+        strategyFactory: StrategyFactory,
+    ): List<SweepResult> {
+        val results = mutableListOf<SweepResult>()
+
+        for (window in windows) {
+            for (thredshold in thredsholds) {
+                val strategy = strategyFactory.createVwapStragy(window, thredshold)
+
+                val result = runBacktest(candles, strategy)
+
+                results.add(SweepResult(window, thredshold, result))
+            }
+        }
+
+        return results.sortedByDescending { it.result.totalPnl }
     }
 }

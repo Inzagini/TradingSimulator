@@ -1,4 +1,4 @@
-package com.Backend.Server.service
+package com.Backend.Server.service.dto
 
 import com.Backend.Server.model.Trade
 
