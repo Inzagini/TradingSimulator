@@ -1,10 +1,8 @@
 package com.Backend.Server.service.dto
 
-data class BacktestMetrics(
+data class TradeMetrics(
     val totalTrades: Int,
     val winRate: Double,
     val averageWin: Double,
     val averageLoss: Double,
-    val maxDrawdown: Double,
-    val maxDrawdownPercent: Double,
 )

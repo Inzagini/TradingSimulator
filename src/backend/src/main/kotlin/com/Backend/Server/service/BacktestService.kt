@@ -6,11 +6,14 @@ import com.Backend.Server.service.dto.BacktestMetrics
 import com.Backend.Server.service.dto.BacktestResult
 import com.Backend.Server.service.dto.EquityPoint
 import com.Backend.Server.service.dto.SweepResult
+import com.Backend.Server.service.dto.TradeMetrics
 import com.Backend.Server.strategy.Signal
 import com.Backend.Server.strategy.Strategy
+import com.Backend.Server.strategy.StrategyConfig
 import com.Backend.Server.strategy.StrategyFactory
-import org.apache.el.lang.ELArithmetic
+import com.Backend.Server.strategy.StrategyType
 import org.springframework.stereotype.Service
+import kotlin.Pair
 import kotlin.math.max
 
 @Service
@@ -59,8 +62,22 @@ class BacktestService {
         }
 
         val totalPnl = trades.sumOf { it.pnl() }
-        val metrics = calculateMetric(trades)
+        val tradeMetrics = calculateMetric(trades)
         val equityCurve = buildMarkToMarketEquity(candles, trades)
+
+        val tmp = calculateDrawdown(equityCurve)
+        val maxDrawdown = tmp.first
+        val maxDrawdownPercent = tmp.second
+
+        val metrics =
+            BacktestMetrics(
+                totalTrades = tradeMetrics.totalTrades,
+                winRate = tradeMetrics.winRate,
+                averageWin = tradeMetrics.averageWin,
+                averageLoss = tradeMetrics.averageLoss,
+                maxDrawdown = maxDrawdown,
+                maxDrawdownPercent = maxDrawdownPercent,
+            )
 
         return BacktestResult(
             totalPnl = totalPnl,
@@ -70,9 +87,9 @@ class BacktestService {
         )
     }
 
-    private fun calculateMetric(trades: List<Trade>): BacktestMetrics {
+    private fun calculateMetric(trades: List<Trade>): TradeMetrics {
         if (trades.isEmpty()) {
-            return BacktestMetrics(0, 0.0, 0.0, 0.0, 0.0)
+            return TradeMetrics(0, 0.0, 0.0, 0.0)
         }
 
         val plns = trades.map { it.pnl() }
@@ -85,41 +102,35 @@ class BacktestService {
         val avgWin = if (wins.isEmpty()) 0.0 else wins.average()
         val avgLoss = if (losses.isEmpty()) 0.0 else losses.average()
 
-        var peak = 0.0
-        var equity = 0.0
-        var maxDrawdown = 0.0
-
-        for (pnl in plns) {
-            equity += pnl
-            peak = max(peak, equity)
-            val drawdown = equity - peak
-            maxDrawdown = minOf(maxDrawdown, drawdown)
-        }
-
-        return BacktestMetrics(
+        return TradeMetrics(
             totalTrades = totalTrades,
             winRate = winRate,
-            avarageWin = avgWin,
-            avarageLoss = avgLoss,
-            maxDrawdown = maxDrawdown,
+            averageWin = avgWin,
+            averageLoss = avgLoss,
         )
     }
 
     fun runParameterSweep(
         candles: List<Candle>,
         windows: List<Int>,
-        thredsholds: List<Double>,
+        thresholds: List<Double>,
         strategyFactory: StrategyFactory,
     ): List<SweepResult> {
         val results = mutableListOf<SweepResult>()
 
         for (window in windows) {
-            for (thredshold in thredsholds) {
-                val strategy = strategyFactory.createVwapStragy(window, thredshold)
+            for (threshold in thresholds) {
+                val config =
+                    StrategyConfig(
+                        type = StrategyType.VWAP,
+                        window = window,
+                        threshold = threshold,
+                    )
+                val strategy = strategyFactory.create(config)
 
                 val result = runBacktest(candles, strategy)
 
-                results.add(SweepResult(window, thredshold, result))
+                results.add(SweepResult(window, threshold, result))
             }
         }
 
@@ -139,16 +150,19 @@ class BacktestService {
         return curve
     }
 
-    private fun buildMarkToMarketEquity(candles: List<Candle>, trades: List<Trade>): List<EquityPoint> {
-
+    private fun buildMarkToMarketEquity(
+        candles: List<Candle>,
+        trades: List<Trade>,
+    ): List<EquityPoint> {
         val curve = mutableListOf<EquityPoint>()
+
+        val initCapital = 10_000.0
 
         var realizePnl = 0.0
         var currentTrade: Trade? = null
         var tradeIndex = 0
 
         for (candle in candles) {
-
             if (tradeIndex < trades.size && trades[tradeIndex].entryTime == candle.timestamp) {
                 currentTrade = trades[tradeIndex]
             }
@@ -162,11 +176,35 @@ class BacktestService {
             val unrealizePnl =
                 if (currentTrade != null) (candle.close - currentTrade.entryPrice) * currentTrade.quantity else 0.0
 
-            val equity = realizePnl + unrealizePnl
+            val equity = initCapital + realizePnl + unrealizePnl
 
             curve.add(EquityPoint(candle.timestamp, equity))
         }
 
         return curve
+    }
+
+    private fun calculateDrawdown(equityCurve: List<EquityPoint>): Pair<Double, Double> {
+        var peak = equityCurve.first().equity
+        var maxDrawdown = 0.0
+        var maxDrawdownPercent = 0.0
+
+        for (point in equityCurve) {
+            if (point.equity > peak) {
+                peak = point.equity
+            }
+
+            val drawdown = point.equity - peak
+
+            if (drawdown < maxDrawdown) {
+                maxDrawdown = drawdown
+
+                if (peak != 0.0) {
+                    maxDrawdownPercent = drawdown / peak
+                }
+            }
+        }
+
+        return Pair(maxDrawdown, maxDrawdownPercent)
     }
 }

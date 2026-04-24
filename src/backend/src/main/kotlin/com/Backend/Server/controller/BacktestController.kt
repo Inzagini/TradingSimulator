@@ -4,7 +4,9 @@ import com.Backend.Server.controller.dto.BacktestSweepRequest
 import com.Backend.Server.repository.CandleRepository
 import com.Backend.Server.service.BacktestService
 import com.Backend.Server.service.IndicatorService
+import com.Backend.Server.strategy.StrategyConfig
 import com.Backend.Server.strategy.StrategyFactory
+import com.Backend.Server.strategy.StrategyType
 import com.Backend.Server.strategy.VwapStrategy
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -30,7 +32,14 @@ class BacktestController(
         @RequestParam threshold: Double,
     ): Any {
         val candles = candleRepository.findCandles(symbol, Instant.parse(start), Instant.parse(end))
-        val strategy = strategyFactory.createVwapStragy(window, threshold)
+
+        val config =
+            StrategyConfig(
+                type = StrategyType.VWAP,
+                window = window,
+                threshold = threshold,
+            )
+        val strategy = strategyFactory.create(config)
 
         return backtestService.runBacktest(candles, strategy)
     }
