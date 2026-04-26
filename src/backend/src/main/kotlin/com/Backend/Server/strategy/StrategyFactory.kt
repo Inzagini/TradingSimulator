@@ -7,9 +7,11 @@ import org.springframework.stereotype.Component
 class StrategyFactory(
     private val indicatorService: IndicatorService,
 ) {
-    fun create(config: StrategyConfig): Strategy =
-        when (config.type) {
-            StrategyType.VWAP -> createVWAP(config)
+    fun create(request: StrategyRequest): Strategy =
+        when (request.type.uppercase()) {
+            "VWAP" -> createVWAP(request.params)
+
+            else -> throw IllegalArgumentException("Unknow strategy Type: ${request.type}")
         }
 
     private fun createVWAP(config: StrategyConfig): Strategy {
