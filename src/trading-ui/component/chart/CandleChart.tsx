@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { createChart, CandlestickData, CandlestickSeries} from "lightweight-charts";
+import { createChart, CandlestickData, CandlestickSeries, LineSeries} from "lightweight-charts";
 
 type Candle = {
     timestamp: string,
@@ -11,11 +11,23 @@ type Candle = {
     close: number
 };
 
-type Props = {
-    candles: Candle[]
-}
+type IndicatorPoint = {
+    timestamp: string,
+    value: number
+};
 
-export default function CandleChart({candles}: Props){
+type Indicators = {
+    vwap?: IndicatorPoint[]
+};
+
+type Props = {
+    candles: Candle[],
+    indicators?: {
+        vwap?: {timestamp: string, value: number}[];
+    };
+};
+
+export default function CandleChart({candles, indicators}: Props){
     const chartContainerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -39,6 +51,12 @@ export default function CandleChart({candles}: Props){
               wickDownColor: "#ef5350",
         });
 
+        const vwapSeries = chart.addSeries( LineSeries,{
+            color: "blue",
+            lineWidth: 2
+        })
+
+
         const formattedData: CandlestickData[] = candles.map(c => ({
             time: Math.floor(new Date(c.timestamp).getTime() / 1000),
             open: c.open,
@@ -48,6 +66,7 @@ export default function CandleChart({candles}: Props){
         }));
 
         candlestickSeries.setData(formattedData);
+
 
         chart.timeScale().fitContent();
 
