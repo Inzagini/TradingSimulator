@@ -23,11 +23,13 @@ class CandleService(
         val nextCursor = candles.lastOrNull()?.timestamp?.toString()
 
         val vwap = indicatorService.calculateVWAP(candles)
+        val vwapSeries = indicatorService.calculateVWAPSeries(candles)
 
         return CandleResponse(
             data = candles,
             nextCursor = nextCursor,
             vwap = vwap,
+            indicator = mapOf("vwap" to vwapSeries),
         )
     }
 

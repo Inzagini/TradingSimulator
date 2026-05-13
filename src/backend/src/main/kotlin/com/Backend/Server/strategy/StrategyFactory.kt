@@ -9,9 +9,19 @@ class StrategyFactory(
 ) {
     fun create(request: StrategyRequest): Strategy =
         when (request.type.uppercase()) {
-            "VWAP" -> createVWAP(request.params)
+            "VWAP" -> {
+                val config =
+                    StrategyConfig(
+                        type = StrategyType.VWAP,
+                        window = request.params["window"] as? Int,
+                        threshold = request.params["threshold"] as? Double,
+                    )
+                createVWAP(config)
+            }
 
-            else -> throw IllegalArgumentException("Unknow strategy Type: ${request.type}")
+            else -> {
+                throw IllegalArgumentException("Unknow strategy Type: ${request.type}")
+            }
         }
 
     private fun createVWAP(config: StrategyConfig): Strategy {
