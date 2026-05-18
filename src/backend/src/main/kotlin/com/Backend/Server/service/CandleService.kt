@@ -18,17 +18,15 @@ class CandleService(
     ): CandleResponse {
         val startCursor = after?.let { Instant.parse(it) } ?: Instant.EPOCH
 
-        val candles = candleRepository.findAfter(symbol, startCursor).take(limit)
+        val candles = candleRepository.findAfter(symbol, startCursor)
 
         val nextCursor = candles.lastOrNull()?.timestamp?.toString()
 
-        val vwap = indicatorService.calculateVWAP(candles)
         val vwapSeries = indicatorService.calculateVWAPSeries(candles)
 
         return CandleResponse(
             data = candles,
             nextCursor = nextCursor,
-            vwap = vwap,
             indicator = mapOf("vwap" to vwapSeries),
         )
     }

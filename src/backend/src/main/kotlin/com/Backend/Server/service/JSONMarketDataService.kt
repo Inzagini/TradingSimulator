@@ -27,7 +27,7 @@ class JSONMarketDataService(
         val candles =
             List(result.timestamp.size) { index ->
                 Candle(
-                    symbol = "ES",
+                    symbol = result.meta.symbol,
                     timestamp = Instant.ofEpochSecond(result.timestamp[index]),
                     open = quote.open[index] ?: 0.0,
                     close = quote.close[index] ?: 0.0,
@@ -44,6 +44,6 @@ class JSONMarketDataService(
             }
         }
 
-        return "Done"
+        return "Readed data and saved to Database - test"
     }
 }

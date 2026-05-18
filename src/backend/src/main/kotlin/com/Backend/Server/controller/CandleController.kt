@@ -16,6 +16,6 @@ class CandleControler(
     fun getCandles(
         @RequestParam symbol: String,
         @RequestParam(required = false) after: String?,
-        @RequestParam(defaultValue = "100") limit: Int,
+        @RequestParam(defaultValue = "2000") limit: Int,
     ): CandleResponse = candleService.getCandlesCursor(symbol, after, limit)
 }

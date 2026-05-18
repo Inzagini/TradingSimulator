@@ -14,7 +14,7 @@ data class Chart(
 
 @Serializable
 data class Meta(
-    val symbol: String
+    val symbol: String,
 )
 
 @Serializable
