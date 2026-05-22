@@ -41,18 +41,32 @@ interface CandleRepository : JpaRepository<Candle, Long> {
         SELECT
             min(c.id) AS id,
             max(c.symbol) AS symbol,
-            time_bucket(INTERVAL '5 minute', c.timestamp) AS timestamp,
+            bucket AS timestamp,
             (array_agg(c.open ORDER BY c.timestamp ASC))[1] AS open,
             max(c.high) AS high,
             min(c.low) AS low,
-            (array_agg(c.close ORDER BY c.timestamp DESC))[2] AS close,
+            (array_agg(c.close ORDER BY c.timestamp DESC))[1] AS close,
             SUM(c.volume) AS volume
-        FROM candles c
-        WHERE c.symbol = :symbol
-        AND c.timestamp > :after
-        GROUP BY time_bucket(INTERVAL '5 minute', c.timestamp)
-        ORDER BY timestamp ASC
-    """,
+        FROM (
+            SELECT
+                c.*,
+                time_bucket(
+                    CASE :interval
+                        WHEN '1m' THEN INTERVAL '1 minute'
+                        WHEN '5m' THEN INTERVAL '5 minutes'
+                        WHEN '15m' THEN INTERVAL '15 minutes'
+                        WHEN '1h' THEN INTERVAL '1 hour'
+                        ELSE INTERVAL '5 minutes'
+                    END,
+                    c.timestamp
+                ) AS bucket
+            FROM candles c
+            WHERE c.symbol = :symbol
+              AND c.timestamp > :after
+        ) c
+        GROUP BY bucket
+        ORDER BY bucket ASC
+        """,
         nativeQuery = true,
     )
     fun findAfterv2(
