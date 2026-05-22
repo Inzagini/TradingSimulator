@@ -35,4 +35,29 @@ interface CandleRepository : JpaRepository<Candle, Long> {
         @Param("start") start: Instant,
         @Param("end") end: Instant,
     ): List<Candle>
+
+    @Query(
+        value = """
+        SELECT
+            min(c.id) AS id,
+            max(c.symbol) AS symbol,
+            time_bucket(INTERVAL '5 minute', c.timestamp) AS timestamp,
+            (array_agg(c.open ORDER BY c.timestamp ASC))[1] AS open,
+            max(c.high) AS high,
+            min(c.low) AS low,
+            (array_agg(c.close ORDER BY c.timestamp DESC))[2] AS close,
+            SUM(c.volume) AS volume
+        FROM candles c
+        WHERE c.symbol = :symbol
+        AND c.timestamp > :after
+        GROUP BY time_bucket(INTERVAL '5 minute', c.timestamp)
+        ORDER BY timestamp ASC
+    """,
+        nativeQuery = true,
+    )
+    fun findAfterv2(
+        @Param("symbol") symbol: String,
+        @Param("interval") interval: String,
+        @Param("after") start: Instant,
+    ): List<Candle>
 }

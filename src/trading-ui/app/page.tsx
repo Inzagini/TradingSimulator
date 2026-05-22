@@ -2,7 +2,7 @@ import { getCandles } from "@/lib/api/candles";
 import CandleChart from "@/component/chart/CandleChart";
 
 export default async function Home() {
-  const data = await getCandles("ES");
+  const data = await getCandles("ES=F");
 
 
   console.log(`Data ${data.data}`)

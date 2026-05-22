@@ -20,6 +20,13 @@ class CandleService(
 
         val candles = candleRepository.findAfter(symbol, startCursor)
 
+        try {
+            val candles2 = candleRepository.findAfterv2(symbol, "5 minute", startCursor)
+            println("5 min chart candle: \n $candles2")
+        } catch (e: Exception) {
+            println("Error: find afterv2 failed $e")
+        }
+
         val nextCursor = candles.lastOrNull()?.timestamp?.toString()
 
         val vwapSeries = indicatorService.calculateVWAPSeries(candles)
