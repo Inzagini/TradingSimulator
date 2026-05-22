@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { createChart, CandlestickData, CandlestickSeries, LineSeries} from "lightweight-charts";
+import { createChart, CandlestickData, IChartApi, ISeriesApi, CandlestickSeries, LineSeries} from "lightweight-charts";
 
 type Candle = {
     timestamp: string,
@@ -28,19 +28,17 @@ type Props = {
 };
 
 export default function CandleChart({candles, indicators}: Props){
-    const chartContainerRef = useRef<HTMLDivElement | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
 
+    const chartRef = useRef<IChartApi | null>(null);
+    const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     useEffect(() => {
-        if (!chartContainerRef.current)
+        if (!containerRef.current)
             return;
 
-        const chart = createChart(chartContainerRef.current, {
-            width: chartContainerRef.current.clientWidth,
+        const chart = createChart(containerRef.current, {
             height: 400,
-            timeScale: {
-                timeVisible: true,
-                secondsVisible: true
-            }
+            width: containerRef.current.clientWidth
         });
 
         const candlestickSeries = chart.addSeries(CandlestickSeries, {
@@ -51,13 +49,22 @@ export default function CandleChart({candles, indicators}: Props){
               wickDownColor: "#ef5350",
         });
 
-        const vwapSeries = chart.addSeries( LineSeries,{
-            color: "blue",
-            lineWidth: 2
-        })
+        chartRef.current = chart;
+        candleSeriesRef.current = candlestickSeries;
 
+        return () => {
+            chart.remove();
+            chartRef.current = null;
+            candleSeriesRef.current = null;
+        }
+        }, [])
 
-        const formattedData: CandlestickData[] = candles.map(c => ({
+    useEffect(() =>{
+
+        if (!candleSeriesRef.current || !candles?.length )
+            return;
+
+        const formattedData = candles.map(c => ({
             time: Math.floor(new Date(c.timestamp).getTime() / 1000),
             open: c.open,
             high: c.high,
@@ -65,15 +72,17 @@ export default function CandleChart({candles, indicators}: Props){
             close: c.close
         }));
 
-        candlestickSeries.setData(formattedData);
+        candleSeriesRef.current.setData(formattedData);
 
+        requestAnimationFrame(() => {
+            chartRef.current?.priceScale('right').applyOptions({
+                autoScale: true,
+            });
+        });
 
-        chart.timeScale().fitContent();
-
-        return () => chart.remove();
         
     }, [candles]);
 
-    return <div ref={chartContainerRef} style={{height: "400px"}}/>;
+    return <div ref={containerRef} style={{height: "400px"}}/>;
 
 }

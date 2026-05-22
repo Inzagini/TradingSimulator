@@ -9,7 +9,8 @@ export default async function Home() {
   return (
     <main>
       <h1>Trading Simulator</h1>
-      <CandleChart candles={data.data}/>
+
+      <CandleChart candles={data.data} />
     </main>
   );
 
