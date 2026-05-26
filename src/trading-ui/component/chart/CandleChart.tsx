@@ -22,12 +22,13 @@ type Indicators = {
 
 type Props = {
     candles: Candle[],
-    indicators?: {
-        vwap?: {timestamp: string, value: number}[];
-    };
+    height: number,
+    // indicators?: {
+    //     vwap?: {timestamp: string, value: number}[];
+    // };
 };
 
-export default function CandleChart({candles, indicators}: Props){
+export default function CandleChart({candles, height = 400}: Props){
     const containerRef = useRef<HTMLDivElement | null>(null);
 
     const chartRef = useRef<IChartApi | null>(null);
@@ -37,7 +38,7 @@ export default function CandleChart({candles, indicators}: Props){
             return;
 
         const chart = createChart(containerRef.current, {
-            height: 400,
+            height: height,
             width: containerRef.current.clientWidth
         });
 
