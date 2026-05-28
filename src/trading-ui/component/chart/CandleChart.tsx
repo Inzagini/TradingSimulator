@@ -22,13 +22,14 @@ type Indicators = {
 
 type Props = {
     candles: Candle[],
-    height: number,
+    height?: number,
+    width?: number
     // indicators?: {
     //     vwap?: {timestamp: string, value: number}[];
     // };
 };
 
-export default function CandleChart({candles, height = 400}: Props){
+export default function CandleChart({candles, height = 400, width = 400}: Props){
     const containerRef = useRef<HTMLDivElement | null>(null);
 
     const chartRef = useRef<IChartApi | null>(null);
@@ -38,8 +39,8 @@ export default function CandleChart({candles, height = 400}: Props){
             return;
 
         const chart = createChart(containerRef.current, {
-            height: height,
-            width: containerRef.current.clientWidth
+            height: containerRef.current.clientHeight,
+            width: width 
         });
 
         const candlestickSeries = chart.addSeries(CandlestickSeries, {
@@ -53,7 +54,20 @@ export default function CandleChart({candles, height = 400}: Props){
         chartRef.current = chart;
         candleSeriesRef.current = candlestickSeries;
 
+        const resizeObserver = new ResizeObserver(() => {
+            if (!containerRef.current || !chartRef.current ) return;
+
+            chartRef.current.applyOptions({
+                width: containerRef.current.clientWidth,
+                height: containerRef.current.clientHeight
+            })
+        })
+
+        resizeObserver.observe(containerRef.current); 
+
         return () => {
+            resizeObserver.disconnect();
+
             chart.remove();
             chartRef.current = null;
             candleSeriesRef.current = null;
@@ -84,6 +98,6 @@ export default function CandleChart({candles, height = 400}: Props){
         
     }, [candles]);
 
-    return <div ref={containerRef} style={{height: "400px"}}/>;
+    return <div ref={containerRef} className="w-full h-full"/>;
 
 }
